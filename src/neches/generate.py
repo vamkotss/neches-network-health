@@ -1,5 +1,7 @@
 """Runs the whole generator in the right order and writes every output file."""
 
+import argparse
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -53,3 +55,33 @@ def generate(cfg: GeneratorConfig, out_dir) -> dict[str, int]:
     files.extend(write_ground_truth(truth, out_dir))  # outage and degradation answer keys
     files.append(write_planted_defects(keys, out_dir))  # data-defect answer key
     return {"devices": len(devices), "rows": len(records["device_id"]), "files": len(files)}
+
+
+def config_for(scale: str, seed: int | None = None) -> GeneratorConfig:
+    """Pick a run size by name (tiny, dev, or full), optionally with a different seed."""
+    sizes = {
+        "tiny": GeneratorConfig.tiny,
+        "dev": GeneratorConfig.dev,
+        "full": GeneratorConfig.full,
+    }
+    cfg = sizes[scale]()  # call the matching "settings card" builder
+    return cfg if seed is None else replace(cfg, seed=seed)  # swap the seed if one was given
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Command-line entry point. Returns the exit code (0 = success)."""
+    parser = argparse.ArgumentParser(description="Generate the Neches Network Health dataset.")
+    parser.add_argument("--scale", choices=["tiny", "dev", "full"], default="dev", help="run size")
+    parser.add_argument("--out", default="data", help="folder to write the files into")
+    parser.add_argument("--seed", type=int, default=None, help="replace the default seed")
+    args = parser.parse_args(argv)  # reads the options typed after the command
+    summary = generate(config_for(args.scale, args.seed), args.out)
+    print(
+        f"Generated {summary['devices']} devices, {summary['rows']:,} rows, "
+        f"{summary['files']} files in {args.out}"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
