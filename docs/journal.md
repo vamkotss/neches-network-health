@@ -16,3 +16,9 @@ A short log of decisions, problems, and fixes. Newest entries at the bottom.
 - Downloads from PyPI timed out because IPv6 does not work inside WSL. IPv4 works, and a longer uv timeout got past it.
 - Push over HTTPS failed because GitHub rejects passwords. Switching the remote to SSH fixed it.
 - Phase 1: wrote the domain primer and the data design.
+
+## 2026-11-16 - Phase 1: generator specification
+
+- Wrote the seeded generator spec with exact rules for every planted defect.
+- Decided on a default dev scale of 500 devices (full run stays 2,000) to keep storage and compute small.
+- Added three answer-key files so the pipeline can be scored against what was planted.

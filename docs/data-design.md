@@ -2,7 +2,7 @@
 
 ## Scale
 
-2,000 devices, one reading every 5 minutes, 14 days. That is about 8 million telemetry rows.
+Default dev scale: 500 devices (2,000 for the full run), one reading every 5 minutes, 14 days. That is about 2 million rows (8 million at full scale).
 
 ## Source tables (synthetic)
 
