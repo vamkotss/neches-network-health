@@ -25,3 +25,23 @@ Phase 0 (repo and environment): in progress. See `docs/journal.md` for the build
 ## Stack
 
 Databricks, AWS (S3, IAM, Lambda, Glue, Athena), Python 3.13, uv, pytest, ruff, GitHub Actions.
+
+## Generate the data
+
+```bash
+# tiny = 50 devices, dev = 500 devices (about 2 million rows), full = 2,000 devices
+PYTHONPATH=src uv run python -m neches.generate --scale dev --out data
+```
+
+The same seed always produces byte-identical files. Answer keys are written to
+`data/ground_truth/` so the pipeline's results can be graded.
+
+## Generate the data
+
+```bash
+# tiny = 50 devices, dev = 500 devices (about 2 million rows), full = 2,000 devices
+PYTHONPATH=src uv run python -m neches.generate --scale dev --out data
+```
+
+The same seed always produces byte-identical files. Answer keys are written to
+`data/ground_truth/` so the pipeline's results can be graded.

@@ -22,3 +22,13 @@ A short log of decisions, problems, and fixes. Newest entries at the bottom.
 - Wrote the seeded generator spec with exact rules for every planted defect.
 - Decided on a default dev scale of 500 devices (full run stays 2,000) to keep storage and compute small.
 - Added three answer-key files so the pipeline can be scored against what was planted.
+
+## 2026-11-16: Phase 2 complete (the generator)
+
+- Built the generator test-first: config, fleet, baseline telemetry, planted behaviors,
+  flat rows, five data defects, writers, and a command-line entry point. 77 tests, CI green.
+- First dev run (500 devices, 14 days): 2,042,784 rows in 346 files, 57 seconds, 122 MB.
+- Answer keys written for grading later: 80,504 late rows, 30,189 duplicates,
+  75 unit-change devices, 5 clock-skew devices, 3 silent devices.
+- Runs are fully repeatable: the same seed gives byte-identical files.
+- Next: Phase 3, get the landing files into S3 and read them from Databricks.
