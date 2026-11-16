@@ -20,7 +20,9 @@ A synthetic fiber-network telemetry lakehouse built on Databricks and AWS. It in
 
 ## Status
 
-Phase 0 (repo and environment): in progress. See `docs/journal.md` for the build log.
+Done: repo and environment, design, and the synthetic data generator (77 tests).
+Next: S3 landing zone and Databricks ingestion (Auto Loader, Bronze, Silver, Gold).
+See `docs/journal.md` for the build log.
 
 ## Stack
 
