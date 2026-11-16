@@ -41,3 +41,34 @@ def write_ground_truth(truth: dict[str, list[dict]], out_dir) -> list[Path]:
             folder / "degradation_events.csv", DEGRADATION_COLUMNS, truth["degradation_events"]
         ),
     ]
+
+
+PLANTED_COLUMNS = ["defect_type", "device_id", "event_time", "detail"]
+# For each defect: which answer-key field holds its time (None = affects a whole device).
+TIME_FIELDS = {
+    "late_arrival": "event_time",
+    "duplicate": "event_time",
+    "clock_skew": None,
+    "unit_change": "change_time",
+    "silent_device": "start",
+}
+
+
+def write_planted_defects(keys: dict[str, dict], out_dir) -> Path:
+    """Write ground_truth/planted_defects.csv: one line per damaged row or device."""
+    rows = []
+    for defect_type, key in keys.items():  # one answer key per defect type
+        time_field = TIME_FIELDS[defect_type]  # which field holds the time (or None)
+        # Everything except the device and the time goes into the "detail" text.
+        extras = [name for name in key if name not in ("device_id", time_field)]
+        for i in range(len(key["device_id"])):  # one line per damaged item
+            rows.append(
+                {
+                    "defect_type": defect_type,
+                    "device_id": str(key["device_id"][i]),
+                    "event_time": str(key[time_field][i]) if time_field else "",
+                    "detail": ";".join(f"{name}={key[name][i]}" for name in extras),
+                }
+            )
+    path = Path(out_dir) / "ground_truth" / "planted_defects.csv"
+    return _write_csv(path, PLANTED_COLUMNS, rows)
