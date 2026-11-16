@@ -45,64 +45,6 @@ Rates are shares of the fleet. Counts are rounded, and the answer keys are the s
 | # | Defect | Rule | Answer key |
 |---|---|---|---|
 | 1 | Duplicate events | 1.5% of rows are repeated 1 to 2 times, in the same or a later batch | planted_defects.csv |
-| 2 | Late events | 4% of rows arrive 1 to 6 hours after event_ts, in a later batch |
-# Update the scale line in the data design so the two documents agree.
-sed -i 's/^2,000 devices, one reading every 5 minutes, 14 days. That is about 8 million telemetry rows./Default dev scale: 500 devices (2,000 for the full run), one reading every 5 minutes, 14 days. That is about 2 million rows (8 million at full scale)./' docs/data-design.md
-
-# Confirm the change took effect.
-grep -n "Default dev scale" docs/data-design.md
-# Go to the project folder.
-cd ~/dev/projects/neches-network-health
-
-# Write the generator specification.
-cat > docs/generator-spec.md <<'EOF'
-# Generator specification
-
-The generator produces synthetic telemetry plus answer keys. Everything is seeded, so the same seed gives byte-identical output.
-
-## Determinism
-
-- Default seed: 20261116, set in config and overridable from the command line.
-- All randomness comes from one numpy generator created from the seed.
-- A test runs the generator twice with the same seed and compares the output.
-
-## Time window and scale
-
-- Window starts 2026-11-01T00:00:00Z and lasts 14 days.
-- One reading per device every 5 minutes, so 4,032 readings per device.
-- Default dev scale: 500 devices (5 OLTs x 5 PON ports x 20 devices). About 2 million rows.
-- Full scale: 2,000 devices (25 OLTs x 4 PON ports x 20 devices). About 8 million rows.
-- Test scale: 50 devices for 1 day.
-
-## Healthy baseline per device
-
-| Field | Rule |
-|---|---|
-| rx_power_dbm | Per-device base drawn from Normal(-19, 1.5), clipped to [-24, -12], plus per-reading noise Normal(0, 0.3) |
-| tx_power_dbm | Normal(2.5, 0.3) |
-| fec_corrected | Poisson(20) |
-| fec_uncorrected | Poisson(0.01) |
-| bip_errors | Poisson(2) |
-| latency_ms | Lognormal around 8 ms |
-| packet_loss_pct | Small value around 0.01, never below 0 |
-| temperature_c | Daily sine wave between 35 and 55 |
-| firmware | "2.4.1" at the start |
-
-## Planted behaviors
-
-Rates are shares of the fleet. Counts are rounded, and the answer keys are the source of truth.
-
-| Behavior | Rule | Answer key |
-|---|---|---|
-| Slow degradation | 3% of devices. rx_power_dbm falls 0.5 dB per day from a random start day, and fec_uncorrected rises with the drift. | degradation_events.csv |
-| Single-device outage | 1.5% of devices. No readings for 20 to 180 minutes. | outage_events.csv |
-| Shared-fiber outage | 1 in 5 PON ports. All 20 devices on the port go silent together for 30 to 240 minutes. | outage_events.csv |
-
-## Planted defects
-
-| # | Defect | Rule | Answer key |
-|---|---|---|---|
-| 1 | Duplicate events | 1.5% of rows are repeated 1 to 2 times, in the same or a later batch | planted_defects.csv |
 | 2 | Late events | 4% of rows arrive 1 to 6 hours after event_ts, in a later batch | planted_defects.csv |
 | 3 | Clock skew | 1% of devices report event_ts 37 minutes behind real time for the whole window | planted_defects.csv |
 | 4 | Unit change | 15% of devices upgrade from firmware 2.4.1 to 2.5.0 on day 8 at a random time. After the upgrade, rx_power_dbm and tx_power_dbm hold milliwatt values (for example 0.0126), not dBm. | planted_defects.csv |
