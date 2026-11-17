@@ -17,5 +17,6 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 
 [tool.ruff]
+builtins = ["spark", "display", "dbutils"]
 line-length = 100
 src = ["src", "tests"]
