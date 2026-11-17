@@ -219,3 +219,42 @@ print("Missed:", expected.count() - found_n)
 print("Gaps not explained by the answer key:", false_n)
 
 # COMMAND ----------
+
+# Load the corrected Silver table
+silver_now = spark.table("workspace.neches.silver_telemetry")
+
+# Late readings arrived after the hour they happened in, so their delay is positive
+late = silver_now.filter(F.col("arrival_delay_min") > 0)
+
+# Summarize the late readings per day: how many, average delay, longest delay
+summary = (
+    late.withColumn("event_date", F.to_date("event_ts"))
+    .groupBy("event_date")
+    .agg(
+        F.count("*").alias("late_rows"),
+        F.round(F.avg("arrival_delay_min"), 1).alias("avg_delay_min"),
+        F.max("arrival_delay_min").alias("max_delay_min"),
+    )
+    .orderBy("event_date")
+)
+
+# Save the summary as a Gold table
+summary.write.mode("overwrite").saveAsTable("workspace.neches.gold_late_arrivals_daily")
+
+# Show the summary
+display(summary)
+
+# Load the late-arrival entries from the answer key (device and true event time)
+key_late = (
+    spark.read.option("header", True)
+    .csv(f"{BUCKET}/ground_truth/planted_defects.csv")
+    .filter(F.col("defect_type") == "late_arrival")
+    .select("device_id", F.to_timestamp("event_time").alias("event_ts"))
+)
+
+# Compare the pipeline's late rows with the answer key
+print("Late rows flagged by the pipeline:", late.count())
+print("Late rows in the answer key:", key_late.count())
+print("Flagged rows that match the key:", late.join(key_late, ["device_id", "event_ts"]).count())
+
+# COMMAND ----------

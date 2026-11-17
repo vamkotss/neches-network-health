@@ -121,3 +121,116 @@ display(
 )
 
 # COMMAND ----------
+
+# Load the current Silver table
+silver_now = spark.table("workspace.neches.silver_telemetry")
+
+# Mark each reading as "off the grid" when its minute is not a multiple of 5 or its seconds are not zero
+checked = silver_now.withColumn(
+    "off_grid",
+    (F.minute("event_ts") % 5 != 0) | (F.second("event_ts") != 0),
+)
+
+# For each device, count how many of its readings are off the grid
+off_grid_devices = (
+    checked.groupBy("device_id")
+    .agg(
+        F.count("*").alias("rows"),
+        F.sum(F.col("off_grid").cast("int")).alias("off_grid_rows"),
+    )
+    # Keep only devices that have at least one off-grid reading
+    .filter(F.col("off_grid_rows") > 0)
+    .orderBy(F.desc("off_grid_rows"))
+)
+
+# Show those devices
+display(off_grid_devices)
+
+# COMMAND ----------
+
+
+# COMMAND ----------
+
+# Reload the full answer key, then show only the clock-skew rows
+BUCKET = "s3://neches-network-health-vamsi-2711"
+key_all = spark.read.option("header", True).csv(f"{BUCKET}/ground_truth/planted_defects.csv")
+display(key_all.filter(F.col("defect_type") == "clock_skew"))
+
+# COMMAND ----------
+
+# Print the full clock-skew notes from the answer key, one line per device
+skew_rows = key_all.filter(F.col("defect_type") == "clock_skew").collect()
+for r in skew_rows:
+    print(r.device_id, "->", r.detail)
+
+# The 5 skewed device ids
+skewed_ids = [r.device_id for r in skew_rows]
+
+# Show the first and last reading time for each skewed device
+# A healthy device starts at 2026-11-01 00:00:00 and ends at 2026-11-14 23:55:00
+display(
+    silver_now.filter(F.col("device_id").isin(skewed_ids))
+    .groupBy("device_id")
+    .agg(F.min("event_ts").alias("first_reading"), F.max("event_ts").alias("last_reading"))
+)
+
+# COMMAND ----------
+
+# Load the current Silver table
+current = spark.table("workspace.neches.silver_telemetry")
+
+# A reading is "off the grid" if its minute is not a multiple of 5 or its seconds are not zero
+is_off_grid = (F.minute("event_ts") % 5 != 0) | (F.second("event_ts") != 0)
+
+# For each device, the share of its readings that are off the grid
+share = (
+    current.withColumn("off_grid", is_off_grid.cast("int"))
+    .groupBy("device_id")
+    .agg(F.avg("off_grid").alias("off_grid_share"))
+)
+
+# Devices where almost every reading is off the grid have a wrong clock
+detected_ids = [r.device_id for r in share.filter(F.col("off_grid_share") > 0.9).collect()]
+print("Devices detected with a skewed clock:", sorted(detected_ids))
+
+# The fix applies only to off-grid readings of those devices (so re-running is safe)
+needs_fix = F.col("device_id").isin(detected_ids) & is_off_grid
+
+corrected = (
+    current
+    # Mark all readings of the skewed devices
+    .withColumn("clock_corrected", F.col("device_id").isin(detected_ids))
+    # Their clocks ran 37 minutes behind, so add 37 minutes back
+    .withColumn(
+        "event_ts",
+        F.when(needs_fix, F.col("event_ts") + F.expr("INTERVAL 37 MINUTES")).otherwise(F.col("event_ts")),
+    )
+    # Recalculate how late each reading was, now that the event time is right
+    .withColumn(
+        "arrival_delay_min",
+        (F.unix_timestamp("arrival_ts") - F.unix_timestamp("event_ts")) / 60,
+    )
+)
+
+# Save the corrected Silver table
+(
+    corrected.write.mode("overwrite")
+    .option("overwriteSchema", "true")
+    .saveAsTable("workspace.neches.silver_telemetry")
+)
+
+# Check 1: no off-grid readings should remain (expect 0)
+final = spark.table("workspace.neches.silver_telemetry")
+print("Off-grid readings left:", final.filter(is_off_grid).count())
+
+# Check 2: the devices we detected should match the answer key's 5 devices (expect True)
+print("Matches the answer key:", set(detected_ids) == set(skewed_ids))
+
+# Check 3: first and last reading for the corrected devices (expect 00:00 and 23:55)
+display(
+    final.filter(F.col("clock_corrected"))
+    .groupBy("device_id")
+    .agg(F.min("event_ts").alias("first_reading"), F.max("event_ts").alias("last_reading"))
+)
+
+# COMMAND ----------
