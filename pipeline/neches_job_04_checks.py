@@ -41,7 +41,11 @@ bad_tx = silver.filter(
 # Each check is: (name, passed?, detail text)
 checks = [
     ("bronze_not_empty", bronze_n > 0, f"bronze rows = {bronze_n}"),
-    ("silver_not_larger_than_bronze", silver_n <= bronze_n, f"silver {silver_n} vs bronze {bronze_n}"),
+    (
+        "silver_not_larger_than_bronze",
+        silver_n <= bronze_n,
+        f"silver {silver_n} vs bronze {bronze_n}",
+    ),
     ("no_duplicate_readings", dupes == 0, f"duplicate readings = {dupes}"),
     ("no_null_keys", null_keys == 0, f"rows missing a key = {null_keys}"),
     ("timestamps_on_5_minute_grid", off_grid == 0, f"off-grid readings = {off_grid}"),

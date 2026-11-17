@@ -18,8 +18,7 @@ bronze = spark.table(BRONZE)
 
 # Step 1: turn text into real timestamps and read the arrival time from the file path
 parsed = (
-    bronze
-    .withColumn("event_ts", F.to_timestamp("event_time"))
+    bronze.withColumn("event_ts", F.to_timestamp("event_time"))
     .withColumn("_dt", F.regexp_extract("_source_file", r"dt=(\d{4}-\d{2}-\d{2})", 1))
     .withColumn("_hour", F.regexp_extract("_source_file", r"hour=(\d{2})", 1))
     .withColumn(
@@ -31,8 +30,7 @@ parsed = (
 # Step 2: keep only the first copy of each reading (same device and same event time)
 window = Window.partitionBy("device_id", "event_ts").orderBy("arrival_ts", "_source_file")
 deduped = (
-    parsed
-    .withColumn("_rn", F.row_number().over(window))
+    parsed.withColumn("_rn", F.row_number().over(window))
     .filter(F.col("_rn") == 1)
     .drop("_rn", "_dt", "_hour")
 )
@@ -56,11 +54,15 @@ silver = (
     # dBm = 10 * log10(milliwatts); applied only to the marked rows
     .withColumn(
         "rx_power_dbm",
-        F.when(F.col("unit_converted"), 10 * F.log10(F.col("rx_power_dbm"))).otherwise(F.col("rx_power_dbm")),
+        F.when(F.col("unit_converted"), 10 * F.log10(F.col("rx_power_dbm"))).otherwise(
+            F.col("rx_power_dbm")
+        ),
     )
     .withColumn(
         "tx_power_dbm",
-        F.when(F.col("unit_converted"), 10 * F.log10(F.col("tx_power_dbm"))).otherwise(F.col("tx_power_dbm")),
+        F.when(F.col("unit_converted"), 10 * F.log10(F.col("tx_power_dbm"))).otherwise(
+            F.col("tx_power_dbm")
+        ),
     )
     # Mark every reading from a skewed device
     .withColumn("clock_corrected", F.col("device_id").isin(skewed_ids))
@@ -86,7 +88,10 @@ silver.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(SIL
 final = spark.table(SILVER)
 print("Silver rows:", final.count())
 print("Skewed devices fixed:", len(skewed_ids))
-print("Devices with converted units:", final.filter("unit_converted").select("device_id").distinct().count())
+print(
+    "Devices with converted units:",
+    final.filter("unit_converted").select("device_id").distinct().count(),
+)
 print("Off-grid readings left:", final.filter(is_off_grid).count())
 
 # COMMAND ----------

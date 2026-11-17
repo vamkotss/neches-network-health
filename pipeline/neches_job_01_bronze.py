@@ -33,8 +33,7 @@ stream = (
 
 # Write new rows into Bronze; availableNow means "process what is waiting, then stop"
 query = (
-    stream.writeStream
-    .option("checkpointLocation", CHECKPOINT)
+    stream.writeStream.option("checkpointLocation", CHECKPOINT)
     .option("mergeSchema", "true")
     .trigger(availableNow=True)
     .toTable(TARGET)

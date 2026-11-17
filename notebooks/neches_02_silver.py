@@ -35,8 +35,7 @@ window = Window.partitionBy("device_id", "event_ts").orderBy("arrival_ts", "_sou
 
 # Keep only the first copy of each reading and drop the helper column
 deduped = (
-    parsed
-    .withColumn("_rn", F.row_number().over(window))
+    parsed.withColumn("_rn", F.row_number().over(window))
     .filter(F.col("_rn") == 1)
     .drop("_rn", "_dt", "_hour")
 )
@@ -90,15 +89,17 @@ fixed = deduped.withColumn("unit_converted", F.col("firmware") == "2.5.0")
 # dBm = 10 * log10(milliwatts)
 fixed = fixed.withColumn(
     "rx_power_dbm",
-    F.when(F.col("unit_converted"), 10 * F.log10(F.col("rx_power_dbm")))
-    .otherwise(F.col("rx_power_dbm")),
+    F.when(F.col("unit_converted"), 10 * F.log10(F.col("rx_power_dbm"))).otherwise(
+        F.col("rx_power_dbm")
+    ),
 )
 
 # Do the same for transmit power
 fixed = fixed.withColumn(
     "tx_power_dbm",
-    F.when(F.col("unit_converted"), 10 * F.log10(F.col("tx_power_dbm")))
-    .otherwise(F.col("tx_power_dbm")),
+    F.when(F.col("unit_converted"), 10 * F.log10(F.col("tx_power_dbm"))).otherwise(
+        F.col("tx_power_dbm")
+    ),
 )
 
 # Save as the Silver table again (replace the old one; allow the new unit_converted column)
@@ -203,7 +204,9 @@ corrected = (
     # Their clocks ran 37 minutes behind, so add 37 minutes back
     .withColumn(
         "event_ts",
-        F.when(needs_fix, F.col("event_ts") + F.expr("INTERVAL 37 MINUTES")).otherwise(F.col("event_ts")),
+        F.when(needs_fix, F.col("event_ts") + F.expr("INTERVAL 37 MINUTES")).otherwise(
+            F.col("event_ts")
+        ),
     )
     # Recalculate how late each reading was, now that the event time is right
     .withColumn(

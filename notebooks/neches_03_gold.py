@@ -30,11 +30,7 @@ flagged = trend.withColumn("is_degrading", F.col("rx_slope_db_per_day") <= -0.05
 flagged.write.mode("overwrite").saveAsTable("workspace.neches.gold_device_trend")
 
 # Show the 20 steepest drops first
-display(
-    spark.table("workspace.neches.gold_device_trend")
-    .orderBy("rx_slope_db_per_day")
-    .limit(20)
-)
+display(spark.table("workspace.neches.gold_device_trend").orderBy("rx_slope_db_per_day").limit(20))
 
 # COMMAND ----------
 
@@ -44,7 +40,9 @@ key = spark.read.option("header", True).csv(f"{BUCKET}/ground_truth/degradation_
 
 # Devices that truly were degraded, and devices our pipeline flagged
 planted = key.select("device_id").distinct()
-detected = spark.table("workspace.neches.gold_device_trend").filter("is_degrading").select("device_id")
+detected = (
+    spark.table("workspace.neches.gold_device_trend").filter("is_degrading").select("device_id")
+)
 
 # Compare the two lists
 planted_n = planted.count()
@@ -107,16 +105,13 @@ devices = (
 )
 
 # Convert the answer key's start and end text into real timestamps
-key_ts = (
-    key_out
-    .withColumn("start_ts", F.to_timestamp("start"))
-    .withColumn("end_ts", F.to_timestamp("end"))
+key_ts = key_out.withColumn("start_ts", F.to_timestamp("start")).withColumn(
+    "end_ts", F.to_timestamp("end")
 )
 
 # Device-scope events: one device each
-device_events = (
-    key_ts.filter(F.col("scope") == "device")
-    .select("event_id", "device_id", "start_ts", "end_ts")
+device_events = key_ts.filter(F.col("scope") == "device").select(
+    "event_id", "device_id", "start_ts", "end_ts"
 )
 
 # Port-scope events: spread each event to every device on that OLT and port
@@ -143,9 +138,7 @@ overlap = (
 )
 
 # How many expected (event, device) pairs were found by at least one gap
-found_n = (
-    e.join(g, overlap, "inner").select("e.event_id", "e.device_id").distinct().count()
-)
+found_n = e.join(g, overlap, "inner").select("e.event_id", "e.device_id").distinct().count()
 
 # How many pipeline gaps are NOT explained by any planted event (false alarms)
 false_n = g.join(e, overlap, "left_anti").count()
@@ -206,9 +199,7 @@ overlap = (
 )
 
 # Expected pairs that at least one gap matches
-found_n = (
-    e.join(g, overlap, "inner").select("e.event_id", "e.device_id").distinct().count()
-)
+found_n = e.join(g, overlap, "inner").select("e.event_id", "e.device_id").distinct().count()
 
 # Gaps that no planted event explains (false alarms)
 false_n = g.join(e, overlap, "left_anti").count()

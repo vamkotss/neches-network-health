@@ -80,9 +80,18 @@ late_daily.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable
 )
 
 # ---------- Print a summary so the job log shows what happened ----------
-print("Degrading devices:", spark.table("workspace.neches.gold_device_trend").filter("is_degrading").count())
+print(
+    "Degrading devices:",
+    spark.table("workspace.neches.gold_device_trend").filter("is_degrading").count(),
+)
 print("Outage gaps:", spark.table("workspace.neches.gold_gaps").filter("kind = 'outage'").count())
-print("Silent devices:", spark.table("workspace.neches.gold_gaps").filter("kind = 'silent_device'").count())
-print("Late rows:", spark.table("workspace.neches.gold_late_arrivals_daily").agg(F.sum("late_rows")).first()[0])
+print(
+    "Silent devices:",
+    spark.table("workspace.neches.gold_gaps").filter("kind = 'silent_device'").count(),
+)
+print(
+    "Late rows:",
+    spark.table("workspace.neches.gold_late_arrivals_daily").agg(F.sum("late_rows")).first()[0],
+)
 
 # COMMAND ----------
