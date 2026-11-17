@@ -11,6 +11,16 @@ A synthetic fiber-network telemetry lakehouse built on Databricks and AWS. It in
 `Generator -> S3 landing -> Auto Loader -> Bronze -> Silver -> Gold -> quality checks -> scheduled Databricks Job`
 
 - **Bronze:** raw files loaded incrementally with Auto Loader, plus the source file and load time.
+
+```mermaid
+flowchart LR
+    G["Synthetic generator"] --> S3[("AWS S3 landing")]
+    S3 --> B["Bronze<br/>Auto Loader, raw"]
+    B --> S["Silver<br/>deduped, units fixed,<br/>clocks corrected"]
+    S --> GO["Gold<br/>degrading devices,<br/>outages, late arrivals"]
+    GO --> Q["8 quality checks"]
+    J["Databricks Job<br/>daily 6 AM"] -.runs.-> B
+```
 - **Silver:** typed timestamps, duplicates removed, units fixed, clock errors corrected.
 - **Gold:** degrading devices, outage and silent-device gaps, daily late-arrival summary.
 - **Checks:** 8 automated data-quality checks written to a results table; the job fails loudly if one fails.
