@@ -32,3 +32,11 @@ A short log of decisions, problems, and fixes. Newest entries at the bottom.
   75 unit-change devices, 5 clock-skew devices, 3 silent devices.
 - Runs are fully repeatable: the same seed gives byte-identical files.
 - Next: Phase 3, get the landing files into S3 and read them from Databricks.
+
+## Phases 3 and 4: S3 landing and Databricks layers (2026-11-16)
+- Uploaded 342 landing files, devices.csv and the answer keys to S3 using a least-privilege IAM user.
+- Connected Databricks to S3 with an IAM role, a storage credential and an external location.
+- Bronze: Auto Loader loaded 2,042,784 rows, an exact match to the generator.
+- Silver: parsed times, removed 30,189 duplicates, and converted receive and transmit power from milliwatts to dBm for 75 devices.
+- Gold: found 15 of 15 degrading devices, 108 of 108 outage gaps and 3 of 3 silent devices, with 0 false alarms.
+- Lesson: uploads from WSL were very slow, so the upload ran from Windows instead.
